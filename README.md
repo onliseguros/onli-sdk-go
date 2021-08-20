@@ -59,6 +59,11 @@ client, err := onli.NewClient(
 Here is an example of how to use services with the above created client:
 
 ```go
+import "github.com/onliseguros/onli-sdk-go/service/merchant"
+```
+
+```go
+svc := merchant.New(client)
 resp, err := svc.GetStore(ctx, "yourBrokerChannelId")
 if err != nil {
     log.Fatalf("Failed to get service response: %v", err)
