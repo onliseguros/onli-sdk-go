@@ -9,7 +9,7 @@ to add new and/or missing endpoints. Currently the following services are suppor
 
 ### Brokers
 
-- [ ] Merchant
+- [x] Merchant
 - [ ] Channel
 - [ ] Product
 - [ ] Lead
@@ -38,7 +38,7 @@ Initialize a new Onli Seguros client using default environment variables, then u
 access different parts of the API:
 
 ```go
-client, err := onli.Client()
+client, err := onli.NewClient()
 if err != nil {
   log.Fatalf("Failed to create client: %v", err)
 }
@@ -47,13 +47,22 @@ if err != nil {
 You can also construct a client using options: 
 
 ```go
-client, err := onli.Client(
+client, err := onli.NewClient(
     onli.Config().WithAudience("yourAudience"),
     onli.Config().WithClientID("clientId"),
     onli.Config().WithClientSecret("clientSecret"),
     onli.Config().WithEnv(onli.EnvStaging),
     onli.Config().WithScope([]string{"scope1","scope2"}),
 )
+```
+
+Here is an example of how to use services with the above created client:
+
+```go
+resp, err := svc.GetStore(ctx, "yourBrokerChannelId")
+if err != nil {
+    log.Fatalf("Failed to get service response: %v", err)
+}
 ```
 
 ## Issues

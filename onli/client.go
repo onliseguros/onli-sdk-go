@@ -2,6 +2,7 @@ package onli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/go-resty/resty/v2"
 	"golang.org/x/oauth2"
@@ -12,14 +13,20 @@ import (
 	"strings"
 )
 
-type client struct {
+// Client for Onli Seguros services.
+type Client struct {
+	// RestClient is not exported here to make an standard rest client
+	// between the services. It holds some defaults to help
+	// communicating with the API in a standard way. You should not
+	// care about using it directly.
+	restClient *resty.Client
+
 	config       *config
 	oauth2Config *clientcredentials.Config
 	oauth2Token  *oauth2.Token
-	httpClient   *resty.Client
 }
 
-// Client initializes a new client enabling the use of services from
+// NewClient initializes a client enabling the use of services from
 // the rest of sdk. It accepts a list of options to configure the client.
 // It also loads by default, the configs from environment vars.
 //
@@ -33,8 +40,8 @@ type client struct {
 //
 // Some validations will occur, to check configuration validity,
 // your application must check for the error that may return.
-func Client(options ...*config) (*client, error) {
-	c := new(client)
+func NewClient(options ...*config) (*Client, error) {
+	c := new(Client)
 	c.config = new(config)
 
 	// The default configuration will be loaded from env vars,
@@ -106,18 +113,19 @@ func Client(options ...*config) (*client, error) {
 		AuthStyle:      oauth2.AuthStyleInParams,
 	}
 
-	// Configure the default http client.
-	c.httpClient = resty.New().
+	// Configure the default http rest client.
+	c.restClient = resty.New().
 		SetCloseConnection(true).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
-		SetHostURL(c.apiBaseUrl())
+		SetHostURL(c.apiBaseUrl()).
+		OnAfterResponse(responseMiddleware)
 
 	return c, nil
 }
 
 // loadConfigFromEnv takes default env vars and load into config.
-func (c *client) loadConfigFromEnv() {
+func (c *Client) loadConfigFromEnv() {
 	c.config.WithAudience(os.Getenv(audience))
 	c.config.WithClientID(os.Getenv(clientId))
 	c.config.WithClientSecret(os.Getenv(clientSecret))
@@ -126,7 +134,7 @@ func (c *client) loadConfigFromEnv() {
 }
 
 // tokenUrl returns the token url for each environment.
-func (c client) tokenUrl() string {
+func (c Client) tokenUrl() string {
 	switch c.config.Env {
 	case EnvDevelopment:
 		return "https://auth-dev.onli.com.br/oauth2/token"
@@ -140,7 +148,7 @@ func (c client) tokenUrl() string {
 }
 
 // apiBaseUrl returns the api base url for each environment.
-func (c client) apiBaseUrl() string {
+func (c Client) apiBaseUrl() string {
 	switch c.config.Env {
 	case EnvDevelopment:
 		return "https://api-dev.onli.com.br"
@@ -153,30 +161,80 @@ func (c client) apiBaseUrl() string {
 	}
 }
 
+var (
+	ErrUnauthorized        = errors.New("unauthorized")
+	ErrNotFound            = errors.New("not found")
+	ErrInternalServerError = errors.New("internal server error")
+	ErrInvalidAPIResponse  = errors.New("invalid api response")
+)
+
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
+func (c *errorResponse) unmarshal(data []byte) {
+	json.Unmarshal(data, c)
+}
+
+// responseMiddleware handles responses from Requests made in the services,
+// allows to handle responses and errors in a normalized way.
+func responseMiddleware(_ *resty.Client, r *resty.Response) error {
+	switch r.StatusCode() {
+	case http.StatusOK:
+		return nil
+	case http.StatusUnauthorized:
+		return ErrUnauthorized
+	case http.StatusNotFound:
+		return ErrNotFound
+	case http.StatusInternalServerError:
+		return ErrInternalServerError
+	case http.StatusBadRequest:
+		var resp errorResponse
+		resp.unmarshal(r.Body())
+		return errors.New(resp.Error)
+	default:
+		return ErrInvalidAPIResponse
+	}
+}
+
 // Authorize uses client credentials to retrieve a token.
 // The provided context optionally controls which HTTP client is used.
 // See the oauth2.HTTPClient variable.
-func (c *client) Authorize(ctx context.Context) (err error) {
+func (c *Client) Authorize(ctx context.Context) (err error) {
 	c.oauth2Token, err = c.oauth2Config.Token(ctx)
 	return err
 }
 
 // Ping the source API to use as health check.
-func (c *client) Ping(ctx context.Context) error {
+func (c *Client) Ping(ctx context.Context) error {
 	err := c.Authorize(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Makes a simple http request to health check endpoint.
-	resp, err := c.httpClient.R().Get("/v1/health")
+	resp, err := c.Request(ctx).Get("/v1/health")
 	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode() != http.StatusOK && resp.StatusCode() != http.StatusNotFound {
+	if resp.StatusCode() != http.StatusOK {
 		return errors.New("not healthy")
 	}
 
 	return nil
+}
+
+// Request returns the API Rest Client to be used in services,
+// you should not care about using it directly. It also handles
+// the OAuth2 token refresh when applicable.
+func (c *Client) Request(ctx context.Context) *resty.Request {
+	if !c.oauth2Token.Valid() {
+		c.Authorize(ctx)
+	}
+
+	return c.restClient.
+		R().
+		SetContext(ctx).
+		SetAuthToken(c.oauth2Token.AccessToken)
 }
