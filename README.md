@@ -7,10 +7,26 @@ Onli Seguros API Client enabling Go programs to interact with our services in a 
 This API client package covers most of the existing Onli Seguros API calls and is updated regularly
 to add new and/or missing endpoints. Currently the following services are supported:
 
-- [x] Applications
-- [x] Award Emojis
-- [x] Branches
-- [ ] Discussions (threaded comments)
+### Brokers
+
+- [ ] Merchant
+- [ ] Channel
+- [ ] Product
+- [ ] Lead
+- [ ] Quote
+- [ ] Sale
+- [ ] Charge
+
+### Customers
+
+- [ ] Recommendation
+
+### Insurers
+
+- [ ] Effect
+- [ ] Proposal
+- [ ] Claim
+- [ ] Policy
 
 ## Usage
 
@@ -18,11 +34,10 @@ to add new and/or missing endpoints. Currently the following services are suppor
 import "github.com/onliseguros/onli-sdk-go/onli"
 ```
 
-Construct a new Onli Seguros client, then use the various services to
+Initialize a new Onli Seguros client using default environment variables, then use the various services to
 access different parts of the API:
 
 ```go
-// Initializes a new client using env vars.
 client, err := onli.Client()
 if err != nil {
   log.Fatalf("Failed to create client: %v", err)
@@ -43,8 +58,9 @@ client, err := onli.Client(
 
 ## Issues
 
-- If you have an issue: report it on the [issue tracker](https://github.com/onliseguros/onli-sdk-go/issues)
+If you have an issue: report it on the [issue tracker](https://github.com/onliseguros/onli-sdk-go/issues)
 
 ## License
 
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at <http://www.apache.org/licenses/LICENSE-2.0>
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance 
+with the License. You may obtain a copy of the License at <http://www.apache.org/licenses/LICENSE-2.0>

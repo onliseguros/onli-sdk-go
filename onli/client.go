@@ -3,16 +3,20 @@ package onli
 import (
 	"context"
 	"errors"
+	"github.com/go-resty/resty/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
 
 type client struct {
 	config       *config
-	oauth2Client *clientcredentials.Config
+	oauth2Config *clientcredentials.Config
 	oauth2Token  *oauth2.Token
+	httpClient   *resty.Client
 }
 
 // Client initializes a new client enabling the use of services from
@@ -90,6 +94,25 @@ func Client(options ...*config) (*client, error) {
 		}
 	}
 
+	// Instantiate a oauth2 client with client credentials.
+	v := url.Values{}
+	v.Set("audience", c.config.Audience)
+	c.oauth2Config = &clientcredentials.Config{
+		ClientID:       c.config.ClientID,
+		ClientSecret:   c.config.ClientSecret,
+		Scopes:         c.config.Scope,
+		TokenURL:       c.tokenUrl(),
+		EndpointParams: v,
+		AuthStyle:      oauth2.AuthStyleInParams,
+	}
+
+	// Configure the default http client.
+	c.httpClient = resty.New().
+		SetCloseConnection(true).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHostURL(c.apiBaseUrl())
+
 	return c, nil
 }
 
@@ -102,12 +125,58 @@ func (c *client) loadConfigFromEnv() {
 	c.config.WithScope(strings.Split(os.Getenv(scope), ","))
 }
 
-func (c client) Authorize(ctx context.Context) (accessToken string, err error) {
-	// TODO
-	return "", nil
+// tokenUrl returns the token url for each environment.
+func (c client) tokenUrl() string {
+	switch c.config.Env {
+	case EnvDevelopment:
+		return "https://auth-dev.onli.com.br/oauth2/token"
+	case EnvStaging:
+		return "https://auth-staging.onli.com.br/oauth2/token"
+	case EnvProduction:
+		return "https://auth.onli.com.br/oauth2/token"
+	default:
+		return ""
+	}
 }
 
-func (c client) Ping(ctx context.Context) error {
-	// TODO
+// apiBaseUrl returns the api base url for each environment.
+func (c client) apiBaseUrl() string {
+	switch c.config.Env {
+	case EnvDevelopment:
+		return "https://api-dev.onli.com.br"
+	case EnvStaging:
+		return "https://api-staging.onli.com.br"
+	case EnvProduction:
+		return "https://api.onli.com.br"
+	default:
+		return ""
+	}
+}
+
+// Authorize uses client credentials to retrieve a token.
+// The provided context optionally controls which HTTP client is used.
+// See the oauth2.HTTPClient variable.
+func (c *client) Authorize(ctx context.Context) (err error) {
+	c.oauth2Token, err = c.oauth2Config.Token(ctx)
+	return err
+}
+
+// Ping the source API to use as health check.
+func (c *client) Ping(ctx context.Context) error {
+	err := c.Authorize(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Makes a simple http request to health check endpoint.
+	resp, err := c.httpClient.R().Get("/v1/health")
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK && resp.StatusCode() != http.StatusNotFound {
+		return errors.New("not healthy")
+	}
+
 	return nil
 }
