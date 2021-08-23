@@ -16,3 +16,15 @@ type BrokerProduct struct {
 	ParticipationRules string           `json:"participation_rules"`
 	Product            *product.Product `json:"product"`
 }
+
+// ListBrokerProductRequest prepares the request to list broker products.
+type ListBrokerProductRequest struct {
+	Rows *int
+	Page *int
+}
+
+// ListBrokerProductResponse defines the response of broker products.
+type ListBrokerProductResponse struct {
+	Total int              `json:"total"`
+	Items []*BrokerProduct `json:"items"`
+}

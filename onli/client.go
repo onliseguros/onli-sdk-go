@@ -36,7 +36,7 @@ type Client struct {
 //	clientId     = "ONLI_CLIENT_ID"
 //	clientSecret = "ONLI_CLIENT_SECRET"
 //	env          = "ONLI_ENVIRONMENT"
-//	scope        = "ONLI_SCOPE"
+//	scopes       = "ONLI_SCOPES"
 //
 // Some validations will occur, to check configuration validity,
 // your application must check for the error that may return.
@@ -66,8 +66,8 @@ func NewClient(options ...*config) (*Client, error) {
 			c.config.WithEnv(opt.Env)
 		}
 
-		if len(opt.Scope) != 0 {
-			c.config.WithScope(opt.Scope)
+		if len(opt.Scopes) != 0 {
+			c.config.WithScopes(opt.Scopes)
 		}
 	}
 
@@ -91,13 +91,13 @@ func NewClient(options ...*config) (*Client, error) {
 		return nil, errors.New("env not valid from config")
 	}
 
-	if len(c.config.Scope) == 0 {
+	if len(c.config.Scopes) == 0 {
 		return nil, errors.New("no scope provided from config")
 	}
 
-	for _, s := range c.config.Scope {
+	for _, s := range c.config.Scopes {
 		if s == "" {
-			return nil, errors.New("scope contains empty values")
+			return nil, errors.New("scopes contains empty values")
 		}
 	}
 
@@ -107,7 +107,7 @@ func NewClient(options ...*config) (*Client, error) {
 	c.oauth2Config = &clientcredentials.Config{
 		ClientID:       c.config.ClientID,
 		ClientSecret:   c.config.ClientSecret,
-		Scopes:         c.config.Scope,
+		Scopes:         c.config.Scopes,
 		TokenURL:       c.tokenUrl(),
 		EndpointParams: v,
 		AuthStyle:      oauth2.AuthStyleInParams,
@@ -130,7 +130,7 @@ func (c *Client) loadConfigFromEnv() {
 	c.config.WithClientID(os.Getenv(clientId))
 	c.config.WithClientSecret(os.Getenv(clientSecret))
 	c.config.WithEnv(os.Getenv(env))
-	c.config.WithScope(strings.Split(os.Getenv(scope), ","))
+	c.config.WithScopes(strings.Split(os.Getenv(scopes), ","))
 }
 
 // tokenUrl returns the token url for each environment.

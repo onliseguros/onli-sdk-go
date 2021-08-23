@@ -1,0 +1,24 @@
+on:
+  push:
+    branches: [ master ]
+
+name: test
+
+jobs:
+  docs-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Go mod vendor
+        id: go-mod-vendor
+        run: |
+          go mod vendor
+
+      - name: Go sec
+        id: go-sec
+        uses: securego/gosec@master
+        with:
+          args: ./...

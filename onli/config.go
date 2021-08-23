@@ -19,7 +19,7 @@ const (
 	clientId     = "ONLI_CLIENT_ID"
 	clientSecret = "ONLI_CLIENT_SECRET"
 	env          = "ONLI_ENVIRONMENT"
-	scope        = "ONLI_SCOPE"
+	scopes       = "ONLI_SCOPES"
 )
 
 // config holds the parameters for configuration,
@@ -37,8 +37,8 @@ type config struct {
 	// Env specifying the communication environment with the API.
 	Env string
 
-	// Scope param from RFC6749, a list of.
-	Scope []string
+	// Scopes param from RFC6749, a list of.
+	Scopes []string
 }
 
 // Config creates an empty config interface.
@@ -70,8 +70,8 @@ func (cfg *config) WithEnv(env string) *config {
 	return cfg
 }
 
-// WithScope sets the scope param into config.
-func (cfg *config) WithScope(scope []string) *config {
-	cfg.Scope = scope
+// WithScopes sets the scopes param into config.
+func (cfg *config) WithScopes(scopes []string) *config {
+	cfg.Scopes = scopes
 	return cfg
 }

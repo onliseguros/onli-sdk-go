@@ -1,5 +1,9 @@
 # onli-sdk-go
 
+[![GitHubAction Status](https://github.com/onliseguros/onli-sdk-go/workflows/test/badge.svg?branch=master)](https://github.com/onliseguros/onli-sdk-go/actions)
+
+---
+
 Onli Seguros API Client enabling Go programs to interact with our services in a simple and uniform way.
 
 ## Coverage
@@ -10,8 +14,8 @@ to add new and/or missing endpoints. Currently the following services are suppor
 ### Brokers
 
 - [x] Merchant
-- [ ] Channel
-- [ ] Product
+- [x] Channel
+- [x] Product
 - [ ] Lead
 - [ ] Quote
 - [ ] Sale
@@ -40,7 +44,7 @@ access different parts of the API:
 ```go
 client, err := onli.NewClient()
 if err != nil {
-  log.Fatalf("Failed to create client: %v", err)
+    panic(err)
 }
 ```
 
@@ -52,7 +56,7 @@ client, err := onli.NewClient(
     onli.Config().WithClientID("clientId"),
     onli.Config().WithClientSecret("clientSecret"),
     onli.Config().WithEnv(onli.EnvStaging),
-    onli.Config().WithScope([]string{"scope1","scope2"}),
+    onli.Config().WithScopes([]string{"scope1","scope2"}),
 )
 ```
 
@@ -64,9 +68,10 @@ import "github.com/onliseguros/onli-sdk-go/service/merchant"
 
 ```go
 svc := merchant.New(client)
+
 resp, err := svc.GetStore(ctx, "yourBrokerChannelId")
 if err != nil {
-    log.Fatalf("Failed to get service response: %v", err)
+    panic(err)
 }
 ```
 
